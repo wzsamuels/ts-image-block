@@ -1,39 +1,50 @@
-/**
- * Registers a new block provided a unique name and an object defining its behavior.
- *
- * @see https://developer.wordpress.org/block-editor/reference-guides/block-api/block-registration/
- */
-import { registerBlockType } from '@wordpress/blocks';
+import { addFilter } from '@wordpress/hooks';
+import { createHigherOrderComponent } from '@wordpress/compose';
+import { Fragment } from '@wordpress/element';
+import { InspectorControls } from '@wordpress/block-editor';
+import { PanelBody, ToggleControl } from '@wordpress/components';
 
-/**
- * Lets webpack process CSS, SASS or SCSS files referenced in JavaScript files.
- * All files containing `style` keyword are bundled together. The code used
- * gets applied both to the front of your site and to the editor.
- *
- * @see https://www.npmjs.com/package/@wordpress/scripts#using-css
- */
-import './style.scss';
+const enableLightboxOnImage = createHigherOrderComponent((BlockEdit) => {
+    return (props) => {
+        if (props.name !== 'core/image') {
+            return <BlockEdit {...props} />;
+        }
 
-/**
- * Internal dependencies
- */
-import Edit from './edit';
-import save from './save';
-import metadata from './block.json';
+        const { attributes, setAttributes, isSelected } = props;
+        const { enableLightbox } = attributes;
 
-/**
- * Every block starts by registering a new block type definition.
- *
- * @see https://developer.wordpress.org/block-editor/reference-guides/block-api/block-registration/
- */
-registerBlockType( metadata.name, {
-	/**
-	 * @see ./edit.js
-	 */
-	edit: Edit,
+        return (
+            <Fragment>
+                <BlockEdit {...props} />
+                {isSelected && (
+                    <InspectorControls>
+                        <PanelBody title="Lightbox Settings">
+                            <ToggleControl
+                                label="Enable Lightbox"
+                                checked={enableLightbox}
+                                onChange={() => setAttributes({ enableLightbox: !enableLightbox })}
+                            />
+                        </PanelBody>
+                    </InspectorControls>
+                )}
+            </Fragment>
+        );
+    };
+}, 'enableLightboxOnImage');
 
-	/**
-	 * @see ./save.js
-	 */
-	save,
-} );
+addFilter('editor.BlockEdit', 'custom/enable-lightbox-on-image', enableLightboxOnImage);
+
+function addLightboxAttribute(settings, name) {
+    if (name === 'core/image') {
+        if (!settings.attributes) {
+            settings.attributes = {};
+        }
+        settings.attributes.enableLightbox = {
+            type: 'boolean',
+            default: false,
+        };
+    }
+    return settings;
+}
+
+addFilter('blocks.registerBlockType', 'custom/add-lightbox-attribute', addLightboxAttribute);

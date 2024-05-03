@@ -17,14 +17,36 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
 
-/**
- * Registers the block using the metadata loaded from the `block.json` file.
- * Behind the scenes, it registers also all assets so they can be enqueued
- * through the block editor in the corresponding context.
- *
- * @see https://developer.wordpress.org/reference/functions/register_block_type/
- */
-function create_block_ts_image_block_block_init() {
-	register_block_type( __DIR__ . '/build' );
+
+function custom_image_block_enqueue_scripts() {
+    wp_enqueue_script(
+        'custom-image-block-js', 
+        plugins_url('/src/index.js', __FILE__), 
+        array('wp-blocks', 'wp-i18n', 'wp-element', 'wp-editor'), 
+        true
+    );
 }
-add_action( 'init', 'create_block_ts_image_block_block_init' );
+
+add_action('enqueue_block_editor_assets', 'custom_image_block_enqueue_scripts');
+
+function custom_image_block_register_block() {
+    register_block_type('custom/image-block', array(
+        'render_callback' => 'custom_image_block_render_callback',
+    ));
+}
+
+add_action('init', 'custom_image_block_register_block');
+
+function custom_image_block_render_callback($attributes) {
+    if (empty($attributes['url'])) {
+        return '';
+    }
+
+    // Assuming you have a lightbox library that works via data attributes
+    return sprintf(
+        '<a href="%s" class="spotlight"><img src="%s" alt="%s"></a>',
+        esc_url($attributes['url']),
+        esc_url($attributes['url']),
+        esc_attr($attributes['alt'])
+    );
+}
